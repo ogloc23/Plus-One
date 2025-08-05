@@ -1,4 +1,6 @@
 const Guest = require("../models/Guest");
+const sendEmail = require("../utils/sendEmail");
+
 
 class GuestService {
   // Create a new guest
@@ -32,14 +34,49 @@ class GuestService {
     }
 
     // Create a new guest instance
-    const guest = new Guest({ name, email, phoneNumber, attendanceStatus });
-    return await guest.save();
-  }
+    const guest = await new Guest({ name, email, phoneNumber, attendanceStatus }).save();
 
-  // Fetch all guests
-  static async getAllGuests() {
-    return await Guest.find().sort({ createdAt: -1 });
-  }
+    // ✅ Notify guest
+    await sendEmail({
+        to: guest.email,
+        subject: "🎉 You're Invited – Thanks for RSVPing!",
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #fff7f0; border-radius: 10px; border: 1px solid #f0e6e0;">
+            <h2 style="color: #d6336c;">Hey ${guest.name} 🎈</h2>
+            <p style="font-size: 16px; color: #333;">Thank you so much for confirming your RSVP to the birthday celebration. We're thrilled you're joining us for this special occasion!</p>
+            <p style="font-size: 16px; color: #333;">Get ready for a day filled with fun, laughter, music, food, and wonderful memories. 🎂🎶🍰</p>
+            <p style="margin-top: 30px; font-weight: bold; color: #d6336c;">With ❤️,</p>
+            <p style="font-size: 16px; color: #333;">The Celebrant</p>
+          </div>
+        `,
+      });
+
+  
+    // ✅ Notify celebrant
+    await sendEmail({
+        to: process.env.CELEBRANT_EMAIL,
+        subject: "📩 New RSVP Received",
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #eef8ff; border-radius: 10px; border: 1px solid #cce5ff;">
+            <h3 style="color: #0d6efd;">🎉 New RSVP Received</h3>
+            <p style="font-size: 16px; color: #333;">A new guest has confirmed their attendance:</p>
+            <ul style="font-size: 16px; color: #333; line-height: 1.6;">
+              <li><strong>Name:</strong> ${guest.name}</li>
+              <li><strong>Email:</strong> ${guest.email}</li>
+              <li><strong>Phone:</strong> ${guest.phoneNumber}</li>
+              <li><strong>Status:</strong> ${guest.attendanceStatus}</li>
+            </ul>
+          </div>
+        `,
+      });
+      // Return the created guest
+      return guest;
+    }
+
+    // Fetch all guests
+    static async getAllGuests() {
+        return await Guest.find().sort({ createdAt: -1 });
+    }
 }
 
 module.exports = GuestService;
